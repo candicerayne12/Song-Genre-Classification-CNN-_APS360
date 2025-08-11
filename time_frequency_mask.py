@@ -1,3 +1,4 @@
+#new only f/t mask but x5
 import os, random, glob
 import numpy as np
 from PIL import Image
@@ -6,20 +7,16 @@ from tqdm import tqdm            # progress bar
 
 from google.colab import drive
 drive.mount('/content/drive')
-
 # -------------------------------------------------
 # CONFIG
 # -------------------------------------------------
-SRC_ROOT       = "/content/drive/My Drive/aps360/new_data/training"
-DEST_ROOT      = "/content/drive/My Drive/aps360/new_data/augmented"  # <── NEW
+SRC_ROOT       = "/content/drive/My Drive/aps360/f_t_data/training"
+DEST_ROOT      = "/content/drive/My Drive/aps360/f_t_data/augmented"  # <── NEW
 OUTPUT_COPIES  = 2          # number of F- and T-masks per original
 F_MASK, T_MASK = 20, 40     # max mask sizes
 MIN_FRAC       = 0.05       # ≥5 % of rows / cols must be masked
 BETA_SHAPE     = 0.4        # MixUp λ ~ Beta(a,a)
 LAMBDA_CLIP    = (0.2, 0.8) # keep λ in [0.2, 0.8]
-
-#new only f/t mask
-
 # ===== HELPERS (unchanged) =====
 def freq_mask(spec, F=20, min_frac=0.05):
     f = np.random.randint(1, F+1)
@@ -44,7 +41,7 @@ try:
 except NameError:
     F_MASK, T_MASK, MIN_FRAC = 20, 40, 0.05
 
-N_PER_TYPE = 2  # two freq + two time masks per original
+N_PER_TYPE = 5  # two freq + two time masks per original
 
 # ===== MAIN (2 *_fmask + 2 *_tmask per original) =====
 grand_total = 0
