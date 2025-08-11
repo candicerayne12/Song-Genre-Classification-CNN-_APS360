@@ -1,4 +1,5 @@
-#mixup and t/f
+#only f/t but x 5
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -25,6 +26,7 @@ class SpectrogramDataset(Dataset):
             'classical': 0, 'country': 1, 'hiphop': 2, 'jazz': 3,
             'metal': 4, 'pop': 5, 'reggae': 6
         }
+
 
         # ----------------- NEW (recursive scan) -----------------
         for root, _, files in os.walk(data_dir):                 # walk sub-folders
@@ -69,7 +71,7 @@ class SpectrogramDataset(Dataset):
 
 # CNN + ANN Model following exact specifications
 class CNNWithANN(nn.Module):
-    def __init__(self, num_hidden_layers=2, hidden_layer_sizes=[512, 128],
+    def __init__(self, num_hidden_layers=2, hidden_layer_sizes=[512, 256],
                  dropout_prob=0.5, activation='relu', use_batch_norm=True):
         # Call __init__ method of nn.Module
         super(CNNWithANN, self).__init__()
@@ -162,27 +164,22 @@ class CNNWithANN(nn.Module):
         }
 
 def train_with_early_stopping(model, train_data, val_data, batch_size=32,
-                             num_epochs=40, lr=3e-4, patience=6):
-    """Training with early stopping on val loss + ReduceLROnPlateau"""
+                             num_epochs=50, lr=1e-3, patience=10):
+    """Training with early stopping and comprehensive metrics"""
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False)
 
-    # Multi-class cross-entropy loss with label smoothing
-    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+    # Multi-class cross-entropy loss
+    criterion = nn.CrossEntropyLoss()
 
     # Adam optimizer with weight decay
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
-
-    # LR scheduler: reduce LR when val loss plateaus
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=3
-    )
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
 
     # Track metrics
     train_losses, train_accs = [], []
     val_losses, val_accs = [], []
 
-    best_val = float('inf')
+    best_val_acc = 0
     patience_counter = 0
 
     for epoch in range(num_epochs):
@@ -191,10 +188,15 @@ def train_with_early_stopping(model, train_data, val_data, batch_size=32,
         train_loss, train_correct, train_total = 0, 0, 0
 
         for imgs, labels in train_loader:
+            # Zero out gradients
             optimizer.zero_grad()
+            # Forward pass
             outputs = model(imgs)
+            # Compute loss and compare to true labels
             loss = criterion(outputs, labels)
+            # Compute gradients
             loss.backward()
+            # Taking a step
             optimizer.step()
 
             train_loss += loss.item()
@@ -205,6 +207,7 @@ def train_with_early_stopping(model, train_data, val_data, batch_size=32,
         # Validation phase
         model.eval()
         val_loss, val_correct, val_total = 0, 0, 0
+
         with torch.no_grad():
             for imgs, labels in val_loader:
                 outputs = model(imgs)
@@ -228,12 +231,9 @@ def train_with_early_stopping(model, train_data, val_data, batch_size=32,
         print(f"Epoch {epoch+1}: Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%, "
               f"Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%")
 
-        # Scheduler step on validation loss
-        scheduler.step(val_loss)
-
-        # Early stopping on validation loss
-        if val_loss < best_val:
-            best_val = val_loss
+        # Early stopping
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
             patience_counter = 0
             torch.save(model.state_dict(), 'best_model.pth')
         else:
@@ -253,7 +253,7 @@ def train_with_early_stopping(model, train_data, val_data, batch_size=32,
         'train_accs': train_accs,
         'val_losses': val_losses,
         'val_accs': val_accs,
-        'best_val_acc': max(val_accs) if val_accs else None
+        'best_val_acc': best_val_acc
     }
 
 def plot_training_results(train_losses, train_accs, val_losses, val_accs):
@@ -359,8 +359,8 @@ def test_single_image(model, image_path, genre_names):
 # Main execution
 if __name__ == "__main__":
     # Load datasets
-    train_data = SpectrogramDataset("/content/drive/My Drive/aps360/other_mod/training", augment=True)
-    val_data = SpectrogramDataset("/content/drive/My Drive/aps360/other_mod/validation", augment=False)
+    train_data = SpectrogramDataset("/content/drive/My Drive/aps360/f_t_data/training", augment=True)
+    val_data = SpectrogramDataset("/content/drive/My Drive/aps360/f_t_data/validation", augment=False)
 
     print(f"Loaded {len(train_data)} training images")
     print(f"Loaded {len(val_data)} validation images")
@@ -372,25 +372,24 @@ if __name__ == "__main__":
     print(f"Genres: {genre_names}")
 
     model = CNNWithANN(
-        num_hidden_layers=2,
-        hidden_layer_sizes=[512, 128],
-        dropout_prob=0.5,
-        activation='relu',
-        use_batch_norm=True
-    )
+            num_hidden_layers=2,
+            hidden_layer_sizes=[512, 256],
+            dropout_prob=0.8,
+            activation='relu',
+            use_batch_norm=True
+        )
 
     # Print model summary
     print_model_summary(model)
 
-    results = train_with_early_stopping(
-        model, train_data, val_data,
-        batch_size=32, num_epochs=40, lr=3e-4, patience=6
-    )
+    results = train_with_early_stopping(model, train_data, val_data,
+                                          batch_size=64, num_epochs=50, lr=5e-4)
 
     # Test on testing data
-    test_data = SpectrogramDataset("/content/drive/My Drive/aps360/other_mod/testing", augment=False)
+    test_data = SpectrogramDataset("/content/drive/My Drive/aps360/f_t_data/testing", augment=False)
     if len(test_data) > 0:
-        # Test first image in testing folder (ensure index exists)
-        first_test_img_path = test_data.image_paths[min(20, len(test_data.image_paths)-1)]
+        # Test first image in testing folder
+        first_test_img_path = test_data.image_paths[20]
         print(f"\nTesting on: {first_test_img_path}")
         test_single_image(model, first_test_img_path, genre_names)
+
