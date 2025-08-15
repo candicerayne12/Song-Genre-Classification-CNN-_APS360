@@ -5,18 +5,18 @@ import librosa
 import librosa.display
 import matplotlib.pyplot as plt
 
-# audio root directory and metadata configuration
+# audio root directory and data configuration
 audio_root = "/path/to/fma_small"
-metadata_file = "/path/to/fma_metadata/tracks.csv"
+data_file = "/path/to/fma_data/tracks.csv"
 spectrogram_dir = "spectrograms_out"
 
-# load metadata and filter for 'small' subset
-track_meta = pd.read_csv(metadata_file, index_col=0, header=[0, 1])
-track_meta = track_meta[track_meta[('set', 'subset')] == 'small']
+# load data and filter for 'small' subset
+track_data = pd.read_csv(data_file, index_col=0, header=[0, 1])
+track_data = track_data[track_data[('set', 'subset')] == 'small']
 
 # select only the genres we are using
 genres_to_use = ['Classical', 'Country', 'Hip-Hop', 'Jazz', 'Metal', 'Pop', 'Reggae']
-subset_meta = track_meta[track_meta[('track', 'genre_top')].isin(genres_to_use)]
+subset_data = track_data[track_data[('track', 'genre_top')].isin(genres_to_use)]
 
 # function to generate and save a mel spectrogram
 # **** this function was developed with help from ChatGPT *****
@@ -28,15 +28,15 @@ def create_and_save_spectrogram(y, sr, save_path, n_mels=128, img_size=277):
     
     # generate mel spectrogram
     mel_spec = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=n_mels)
-    mel_db = librosa.power_to_db(mel_spec, ref=np.max)
+    mel_db = librosa.power_to_db(mel_spec, ref=np.max) #power to DB for CNN compatibility
     
     # display and save the spectrogram
     librosa.display.specshow(mel_db, sr=sr, fmax=8000, ax=ax)
     fig.savefig(save_path, dpi=100, bbox_inches=None, pad_inches=0)
     plt.close(fig)
 
-# loop through each track in the filtered metadata
-for tid, row in subset_meta.iterrows():
+# loop through each track in the filtered data
+for tid, row in subset_data.iterrows():
     genre = row[('track', 'genre_top')]
     genre_dir = os.path.join(spectrogram_dir, genre)
     os.makedirs(genre_dir, exist_ok=True)
