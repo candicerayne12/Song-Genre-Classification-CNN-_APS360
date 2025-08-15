@@ -5,7 +5,7 @@ import librosa
 import librosa.display
 import matplotlib.pyplot as plt
 
-audio_root = "/path/to/fma_small"
+audio_root = "/path/to/fma_small" 
 data_file = "/path/to/fma_data/tracks.csv"
 spectrogram_dir = "spectrograms_out"
 
