@@ -5,7 +5,6 @@ import librosa
 import librosa.display
 import matplotlib.pyplot as plt
 
-# audio root directory and data configuration
 audio_root = "/path/to/fma_small"
 data_file = "/path/to/fma_data/tracks.csv"
 spectrogram_dir = "spectrograms_out"
@@ -44,7 +43,7 @@ for tid, row in subset_data.iterrows():
     # determine subfolder structure and file path
     tid_str = f"{tid:06d}"
     subfolder = tid_str[:3]
-    mp3_file = os.path.join(audio_root, subfolder, f"{tid_str}.mp3")
+    mp3_file = os.path.join(audio, f"{tid:06d}"[:3], f"{tid:06d}.mp3")
 
     # skip if file is missing
     if not os.path.exists(mp3_file):
